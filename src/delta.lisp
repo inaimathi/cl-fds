@@ -34,15 +34,6 @@
 (defmethod apply!! ((tgt list) (ins insertion))
   (concatenate 'list (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
 
-;; (defun compute-final-size (target transforms)
-;;   (let* ((l (len target)))
-;;     (loop for tr in transforms
-;;        do (typecase tr
-;; 	    (insertion (incf l (insertion-v tr)))
-;; 	    (deletion (decf l (deletion-span tr)))
-;; 	    (slice (setf l (- (or (slice-to tr) (- l 1)) (slice-from tr))))))
-;;     l))
-
 (defmethod collapse! (thing) thing)
 (defmethod collapse! ((d delta))
   (if (forced? d)
