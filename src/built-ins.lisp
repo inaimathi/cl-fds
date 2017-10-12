@@ -11,8 +11,6 @@
 (defmethod catn (thing &rest more-things)
   (reduce #'cat more-things :initial-value thing))
 
-;; TODO - split-at
-
 (defmethod ix ((s string) (ix integer)) (aref s ix))
 (defmethod ix ((v vector) (ix integer)) (aref v ix))
 (defmethod ix ((l list) (ix integer)) (nth ix l))

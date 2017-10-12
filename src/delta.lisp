@@ -1,7 +1,9 @@
 (in-package #:cl-fds)
 
+;;;;; Model definition and internals
 (defclass delta ()
-  ((target :reader target :initarg :target)
+  ((target :accessor target :initarg :target)
+   (forced? :accessor forced? :initform nil)
    (len :reader len :initarg :len :initform 0)
    (empty :reader empty :initarg :empty)
    (depth :reader depth :initarg :depth :initform 0)))
@@ -39,18 +41,28 @@
 
 (defmethod collapse! (thing) thing)
 (defmethod collapse! ((d delta))
-  (let ((tgt (target d))
-	(transforms (list d)))
-    (loop while (typep tgt 'delta)
-       do (progn (push tgt transforms)
-		 (setf tgt (target tgt))))
-    (when (vectorp tgt) (setf tgt (copy-seq tgt)))
-    (loop for tr in transforms
-       do (setf tgt (apply!! tgt tr)))
-    tgt))
+  (if (forced? d)
+      (target d)
+      (let ((tgt (target d))
+	    (transforms (list d)))
+	(loop while (typep tgt 'delta)
+	   do (progn (push tgt transforms)
+		     (setf tgt (target tgt))))
+	(when (vectorp tgt) (setf tgt (copy-seq tgt)))
+	(loop for tr in transforms
+	   do (setf tgt (apply!! tgt tr)))
+	(setf (forced? d) t
+	      (target d) tgt)
+	tgt)))
+
+;;;;; Basic methods for the built-ins and deltas
+(defmethod cat ((da delta) (db delta)) :todo)
+(defmethod catn ((d delta) &rest more-deltas) :todo)
 
 (defmethod set! ((d delta) (ix integer) val)
-  (make-instance 'mutation :depth (+ (depth d)) :len (len d) :target d :changes (list (cons ix val)) :empty (empty d)))
+  (if (forced? d)
+      (set! (target d) ix val)
+      (make-instance 'mutation :depth (+ (depth d)) :len (len d) :target d :changes (list (cons ix val)) :empty (empty d))))
 (defmethod set! ((m mutation) (ix integer) val)
   (make-instance 'mutation :depth (depth m) :len (len m) :target (target m) :empty (empty m)
 		 :changes (cons (cons ix val)
@@ -72,7 +84,9 @@
 	((and to (= from to)) (empty tgt) zero)
 	(t (make-instance 'slice :depth depth :len (- (or to (len tgt)) from) :target tgt :from from :to to :empty zero))))
 (defmethod slice ((d delta) &key (from 0) to)
-  (mk-slice d from to (empty d) (+ 1 (depth d))))
+  (if (forced? d)
+      (slice (target d) :from from :to to)
+      (mk-slice d from to (empty d) (+ 1 (depth d)))))
 (defmethod slice ((s slice) &key (from 0) (to (to s)))
   (let ((+from (+ (from s) from))
 	(+to (min to (to s))))
@@ -85,7 +99,9 @@
   (mk-slice l from to nil 0))
 
 (defmethod insert-at ((d delta) (ix integer) wedge)
-  (make-instance 'insertion :depth (+ 1 (depth d)) :len (+ (len d) (len wedge)) :target d :k ix :v wedge :empty (empty d)))
+  (if (forced? d)
+      (insert-at (target d) ix wedge)
+      (make-instance 'insertion :depth (+ 1 (depth d)) :len (+ (len d) (len wedge)) :target d :k ix :v wedge :empty (empty d))))
 (defmethod insert-at ((s string) (ix integer) (wedge string))
   (make-instance 'insertion :len (+ (length s) (length wedge)) :target s :k ix :v wedge :empty ""))
 (defmethod insert-at ((v vector) (ix integer) (wedge vector))
@@ -94,3 +110,21 @@
   (loop for i from 0 for elem in l
      when (= i ix) append wedge
      collect elem))
+
+(defun slices (thing ix) (values (slice thing :to ix) (slice thing :from ix)))
+(defmethod split-at ((d delta) (ix integer))
+  (if (forced? d) (split-at (target d) ix) (slices d ix)))
+(defmethod split-at ((s string) (ix integer)) (slices s ix))
+(defmethod split-at ((v vector) (ix integer)) (slices v ix))
+(defmethod split-at ((l list) (ix integer)) (slices l ix))
+
+(defmethod ix ((d delta) (ix integer)) (ix (collapse! d) ix))
+(defmethod traverse! ((d delta) fn) (traverse! (collapse! d) fn))
+(defmethod traverse ((d delta) fn) (traverse (collapse! d) fn))
+
+(defmethod as ((format (eql 'list)) (d delta))
+  (coerce (collapse! d) 'list))
+(defmethod as ((format (eql 'string)) (d delta))
+  (coerce (collapse! d) 'string))
+(defmethod as ((format (eql 'vector)) (d delta))
+  (coerce (collapse! d) 'vector))
