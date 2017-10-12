@@ -62,13 +62,7 @@
   (cond ((and (zerop from) (= (length s) to)) s)
 	((= from to) "")
 	(t (make-instance 'slice :len (- to from) :target s :from from :to to))))
-(defmethod slice ((l list) &key (from 0) to)
-  (let ((f (or from 0)))
-    (if to
-	(loop for elem in l for i from 0
-	   when (and (> to i) (>= i f)) collect elem)
-	(loop for elem in l for i from 0
-	   when (>= i f) collect elem))))
+(defmethod slice ((l list) &key (from 0) to) (subseq l from to))
 
 (defmethod insert-at ((s string) (ix integer) (wedge string))
   (make-instance 'insertion :len (+ (length s) (length wedge)) :target s :k ix :v wedge))
