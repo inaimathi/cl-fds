@@ -4,19 +4,22 @@
 (defmethod len ((v vector)) (length v))
 (defmethod len ((l list)) (length l))
 
-;; TODO - cat
+(defmethod cat ((a vector) (b vector)) (concatenate 'vector a b))
+(defmethod cat ((a string) (b string)) (concatenate 'string a b))
+(defmethod cat ((a list) (b list)) (concatenate 'list a b))
 
 (defmethod catn (thing &rest more-things)
   (reduce #'cat more-things :initial-value thing))
 
-;; TODO - set!
-;; TODO - slice
-;; TODO - insert-at
 ;; TODO - split-at
 
 (defmethod ix ((s string) (ix integer)) (aref s ix))
 (defmethod ix ((v vector) (ix integer)) (aref v ix))
 (defmethod ix ((l list) (ix integer)) (nth ix l))
+
+(defmethod in-bounds? ((s string) (ix integer)) (> (length s) ix))
+(defmethod in-bounds? ((v vector) (ix integer)) (> (length v) ix))
+(defmethod in-bounds? ((l list) (ix integer)) (> (length l) ix))
 
 (defmethod traverse! ((l list) fn) (mapc fn l))
 (defmethod traverse! ((v vector) fn) (loop for val across v do (funcall fn val)) nil)
