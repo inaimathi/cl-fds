@@ -3,16 +3,19 @@
 (defclass delta ()
   ((target :reader target :initarg :target)
    (len :reader len :initarg :len :initform 0)))
-(defclass mutation (delta) ((k :reader k :initarg :k) (v :reader v :initarg :v)))
+(defclass mutation (delta) ((changes :reader changes :initarg :changes)))
 (defclass insertion (delta) ((k :reader k :initarg :k) (v :reader v :initarg :v)))
 (defclass slice (delta) ((from :reader from :initarg :from) (to :reader to :initarg :to)))
 ;; (defclass deletion (delta) ((k :reader k :initarg :k) (span :reader span :initarg :size)))
 
 ;; TODO - majorly optimize apply!! and collapse!
 (defmethod apply!! ((tgt vector) (m mutation))
-  (setf (aref tgt (k m)) (v m)))
+  (loop for (k . v) in (changes m)
+     do (setf (aref tgt (k m)) (v m))))
 (defmethod apply!! ((tgt list) (m mutation))
-  (setf (nth (k m) tgt) (v m)))
+  (loop for elem in tgt for i from 0
+     for new = (cdr (assoc i (changes m)))
+     if new collect new else collect elem))
 
 (defmethod apply!! ((tgt vector) (ins insertion))
   (catn (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
@@ -37,13 +40,14 @@
        do (setf tgt (apply!! tgt tr)))
     tgt))
 
-(defmethod set! ((s string) (ix integer) (v character))
-  (make-instance 'mutation :len (length s) :target s :k ix :v v))
+(defmethod set! ((m mutation) (ix integer) val)
+  (make-instance 'mutation :len (len m) :target (target m) :changes (cons (cons ix val) (changes m))))
+(defmethod set! ((s string) (ix integer) (val character))
+  (make-instance 'mutation :len (length s) :target s :changes (list (cons ix val))))
 (defmethod set! ((v vector) (ix integer) val)
-  (make-instance 'mutation :len (length v) :target v :k ix :v val))
+  (make-instance 'mutation :len (length v) :target v :changes (list (cons ix val))))
 (defmethod set! ((l list) (ix integer) val)
-  (loop for elem in l for i from 0
-     if (= i ix) collect val else collect elem))
+  (make-instance 'mutation :len (length l) :target l :changes (list (cons ix val))))
 
 ;; TODO - bounds check on from and to here
 (defmethod slice ((s slice) &key (from 0) (to (to s)))
