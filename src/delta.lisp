@@ -25,10 +25,14 @@
 
 ;; TODO - optimize collapse! and apply!! for insertion
 ;; NOTE - There are probably better macro-level optimizations we could run here. In particular, it's pointless to keep anything but the latest slice for a delta. Similarly, we can cluster mutations, both discarding ones that get sliced out of bounds and overriding ones that hit the same coordinate as a previous mutation. Insertions are the only thing that really act kinda weirdly. We can't reasonably cluster them, though they are expressible as cat/slice combos if we go that route. Anyway, interaction between insertion and slice/mutation are the only things keeping this from being a trivial problem. If we can resolve that (and I'm leaning towards a thing that looks like operational transformations), we should get a data structure that has good asymptotic and constant factors (unlike the below, which is currently about as bad as the naive approach, albeit amortized, and has some pretty horrendous constant factors attached thanks to method call overhead).
+;; NOTE - These are the ways we could optimize
+;;     1. Re-model deltas so that they're an initial target and a list of transformations on it. When adding a new transformation, condense existing ones instead of just wrapping the old one as a target. (So, slices discard old slices and remove out-of-bounds mutations/insertions, mutations still override earlier mutations at the same index, insertions affect mutations and slices that come after them)
+;;     2. Add `cat` as a separate "delta". Add a corresponding apply!! and collapse! implementation, and make sure that the other delta generating functions do the appropriate thing when dealing with cat inputs.
+
 (defmethod apply!! ((tgt vector) (ins insertion))
-  (catn (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
+  (concatenate 'vector (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
 (defmethod apply!! ((tgt list) (ins insertion))
-  (catn (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
+  (concatenate 'list (subseq tgt 0 (k ins)) (v ins) (subseq tgt (k ins))))
 
 ;; (defun compute-final-size (target transforms)
 ;;   (let* ((l (len target)))
@@ -56,8 +60,10 @@
 	tgt)))
 
 ;;;;; Basic methods for the built-ins and deltas
-(defmethod cat ((da delta) (db delta)) :todo)
-(defmethod catn ((d delta) &rest more-deltas) :todo)
+(defmethod cat ((a delta) (b delta))
+  (cat (collapse! a) (collapse! b)))
+(defmethod catn ((d delta) &rest more-deltas)
+  (apply #'catn (mapcar #'collapse! (cons d more-deltas))))
 
 (defmethod set! ((d delta) (ix integer) val)
   (if (forced? d)
