@@ -3,14 +3,11 @@
 (defstruct rope (length 0) children)
 
 (defun rope (&rest elems)
-  (make-rope :length (length elems) :children (list (coerce elems 'vector))))
+  (let ((v (coerce elems 'vector)))
+    (make-rope :length (length v) :children (list v))))
 
 (defmethod len ((r rope)) (rope-length r))
 
-(defmethod cat (a (rb rope))
-  (make-rope :length (+ (len a) (len rb)) :children (list a rb)))
-(defmethod cat ((ra rope) b)
-  (make-rope :length (+ (len ra) (len b)) :children (list ra b)))
 (defmethod cat ((ra rope) (rb rope))
   (make-rope :length (+ (len ra) (len rb)) :children (list ra rb)))
 
@@ -42,9 +39,9 @@
 (defmethod empty ((format (eql 'rope)))
   (make-rope :children nil))
 
-(defmethod coerce-to ((r rope) (format (eql 'list)))
-  (loop for c in (rope-children r) append (coerce-to c format)))
-(defmethod coerce-to ((r rope) (format (eql 'vector)))
+(defmethod as ((format (eql 'list)) (r rope))
+  (loop for c in (rope-children r) append (as format c)))
+(defmethod as ((format (eql 'vector)) (r rope))
   (let ((new-arr (make-array (list (len r))))
 	(next 0))
     (traverse!
@@ -52,7 +49,7 @@
 	 (setf (aref new-arr next) v)
 	 (incf next)))
     new-arr))
-(defmethod coerce-to ((r rope) (format (eql 'string)))
+(defmethod as ((format (eql 'string)) (r rope))
   (let ((new-arr (make-string (len r)))
 	(next 0))
     (traverse!

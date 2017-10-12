@@ -9,7 +9,10 @@
   :components ((:module
 		src :components
 		((:file "package")
+		 (:file "util")
 		 (:file "cl-fds")
+		 (:file "built-ins")
+		 (:file "delta")
 		 (:file "rope")
 		 (:file "ribbit")))))
 
