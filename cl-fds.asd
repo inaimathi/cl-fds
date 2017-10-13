@@ -12,6 +12,7 @@
 		 (:file "util")
 		 (:file "cl-fds")
 		 (:file "built-ins")
+		 (:file "defaults")
 		 (:file "delta")
 		 (:file "rope")
 		 (:file "ribbit")))))

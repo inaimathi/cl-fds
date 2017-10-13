@@ -1,5 +1,8 @@
 (in-package #:cl-fds)
 
+;; This file contains the default API implementations of each fds method for
+;; each of the supported built-in sequence/sequence-like datatypes.
+
 (defmethod len ((s string)) (length s))
 (defmethod len ((v vector)) (length v))
 (defmethod len ((l list)) (length l))
@@ -8,16 +11,9 @@
 (defmethod cat ((a string) (b string)) (concatenate 'string a b))
 (defmethod cat ((a list) (b list)) (concatenate 'list a b))
 
-(defmethod catn (thing &rest more-things)
-  (reduce #'cat more-things :initial-value thing))
-
 (defmethod ix ((s string) (ix integer)) (aref s ix))
 (defmethod ix ((v vector) (ix integer)) (aref v ix))
 (defmethod ix ((l list) (ix integer)) (nth ix l))
-
-(defmethod in-bounds? ((s string) (ix integer)) (> (length s) ix))
-(defmethod in-bounds? ((v vector) (ix integer)) (> (length v) ix))
-(defmethod in-bounds? ((l list) (ix integer)) (> (length l) ix))
 
 (defmethod traverse! ((l list) fn) (mapc fn l))
 (defmethod traverse! ((v vector) fn) (loop for val across v do (funcall fn val)) nil)
@@ -30,6 +26,8 @@
 (defmethod empty ((format (eql 'list))) nil)
 (defmethod empty ((format (eql 'vector))) #())
 (defmethod empty ((format (eql 'string))) "")
+
+(defmethod empty? ((l list)) (null l))
 
 (defmethod as ((format (eql 'list)) (l list)) l)
 (defmethod as ((format (eql 'list)) (v vector)) (coerce v 'list))

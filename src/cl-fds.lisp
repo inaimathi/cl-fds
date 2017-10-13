@@ -13,4 +13,5 @@
 (defgeneric traverse! (thing fn))
 (defgeneric traverse (thing fn))
 (defgeneric empty (format))
+(defgeneric empty? (thing))
 (defgeneric as (format thing))
